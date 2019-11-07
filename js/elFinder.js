@@ -2207,7 +2207,7 @@ var elFinder = function(elm, opts, bootCallback) {
 	 * @todo
 	 * @return $.Deferred
 	 */
-	this.request = function(opts) { 
+	this.request = function(opts) {
 		var self     = this,
 			o        = this.options,
 			dfrd     = $.Deferred(),
@@ -2243,6 +2243,9 @@ var elFinder = function(elm, opts, bootCallback) {
 			timeout,
 			// use browser cache
 			useCache = (opts.options || {}).cache,
+			// use local filesystem
+			localFS = o.localFS,
+
 			// request options
 			options = Object.assign({
 				url      : o.url,
@@ -2251,6 +2254,7 @@ var elFinder = function(elm, opts, bootCallback) {
 				dataType : 'json',
 				cache    : (self.api >= 2.1029), // api >= 2.1029 has unique request ID
 				data     : data,
+				localFS  : localFS,
 				headers  : this.customHeaders,
 				xhrFields: this.xhrFields
 			}, opts.options || {}),
@@ -2674,19 +2678,41 @@ var elFinder = function(elm, opts, bootCallback) {
 				};
 
 				requestCnt++;
+				if (options.localFS){
+					//debugger;
+					console.log("elfinder options", options);
+					//self.transport.send(options)
+					dfrd.xhr = xhr = messageBackend("filemanager_send", options)
+						.then(success, error)
+						.then(function() {
+							// set responseURL from native xhr object
+							if (options._xhr && typeof options._xhr.responseURL !== 'undefined') {
+								xhr.responseURL = options._xhr.responseURL || '';
+							}
 
-				dfrd.xhr = xhr = self.transport.send(options).always(function() {
-					// set responseURL from native xhr object
-					if (options._xhr && typeof options._xhr.responseURL !== 'undefined') {
-						xhr.responseURL = options._xhr.responseURL || '';
-					}
-					--requestCnt;
-					if (requestQueue.length) {
-						requestQueue.shift()();
-					} else {
-						requestQueueSkipOpen = false;
-					}
-				}).fail(error).done(success);
+							--requestCnt;
+							if (requestQueue.length) {
+								requestQueue.shift()();
+							} else {
+								requestQueueSkipOpen = false;
+							}
+						});
+				}
+				else{
+					dfrd.xhr = xhr = self.transport.send(options).always(function() {
+						// set responseURL from native xhr object
+						if (options._xhr && typeof options._xhr.responseURL !== 'undefined') {
+							xhr.responseURL = options._xhr.responseURL || '';
+						}
+						--requestCnt;
+						if (requestQueue.length) {
+							requestQueue.shift()();
+						} else {
+							requestQueueSkipOpen = false;
+						}
+					}).fail(error).done(success);
+				}
+
 				
 				if (self.api >= 2.1029) {
 					xhr._requestId = reqId;
@@ -2720,7 +2746,7 @@ var elFinder = function(elm, opts, bootCallback) {
 				dfrd.always(function() {
 					self.unbind('unload destroy', abort);
 				});
-				
+				//debugger;
 				return dfrd;
 			},
 			queueingRequest = function() {
@@ -2782,7 +2808,7 @@ var elFinder = function(elm, opts, bootCallback) {
 				});
 			return dfrd;
 		}
-		
+		//debugger;
 		return queueingRequest();
 	};
 	
@@ -3932,6 +3958,15 @@ var elFinder = function(elm, opts, bootCallback) {
 	this.dragUpload = false;
 	this.xhrUpload  = (typeof XMLHttpRequestUpload != 'undefined' || typeof XMLHttpRequestEventTarget != 'undefined') && typeof File != 'undefined' && typeof FormData != 'undefined';
 	
+	function messageBackend(msg, payload){
+		return browser.runtime.sendMessage({
+			reason: msg,
+			payload: payload
+		});
+	};
+
+	browser.runtime.onMessage.addListener(handleMessage);
+
 	// configure transport object
 	this.transport = {};
 
@@ -3943,13 +3978,17 @@ var elFinder = function(elm, opts, bootCallback) {
 	}
 	
 	if (typeof(this.transport.send) != 'function') {
+		// this function shouldn't be used, use messageBackend instead.  TODO: Remove
 		this.transport.send = function(opts) {
 			if (!self.UA.IE) {
 				// keep native xhr object for handling property responseURL
+				//debugger;
 				opts._xhr = new XMLHttpRequest();
 				opts.xhr = function() { return opts._xhr; };
 			}
-			return $.ajax(opts);
+			//return $.ajax(opts);
+			console.log("fmsending");
+			return messageBackend("filemanager_send", opts);
 		};
 	}
 	
@@ -4769,7 +4808,7 @@ var elFinder = function(elm, opts, bootCallback) {
 			return alert(self.i18n('errNode'));
 		}
 		// check connector url
-		if (!self.options.url) {
+		if (!self.options.url && !self.options.localFS) {
 			return alert(self.i18n('errURL'));
 		}
 		
