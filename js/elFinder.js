@@ -2370,7 +2370,7 @@ var elFinder = function(elm, opts, bootCallback) {
 			 **/
 			success = function(response) {
 				var d = self.options.debug;
-				
+				console.log("got success response", response);
 				// Set currrent request command name
 				self.currentReqCmd = cmd;
 				
@@ -2682,6 +2682,7 @@ var elFinder = function(elm, opts, bootCallback) {
 					//debugger;
 					console.log("elfinder options", options);
 					//self.transport.send(options)
+
 					dfrd.xhr = xhr = messageBackend("filemanager_send", options)
 						.then(success, error)
 						.then(function() {
@@ -3958,14 +3959,19 @@ var elFinder = function(elm, opts, bootCallback) {
 	this.dragUpload = false;
 	this.xhrUpload  = (typeof XMLHttpRequestUpload != 'undefined' || typeof XMLHttpRequestEventTarget != 'undefined') && typeof File != 'undefined' && typeof FormData != 'undefined';
 	
+	function handleMessage(message, sender, sendResponse){
+		console.log("got message in iframe");
+		console.log(message, sender, sendResponse);
+	}
+
+	browser.runtime.onMessage.addListener(handleMessage);
+
 	function messageBackend(msg, payload){
 		return browser.runtime.sendMessage({
 			reason: msg,
 			payload: payload
 		});
 	};
-
-	browser.runtime.onMessage.addListener(handleMessage);
 
 	// configure transport object
 	this.transport = {};
