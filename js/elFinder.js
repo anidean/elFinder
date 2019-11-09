@@ -3,6 +3,7 @@
  *
  * @author Dmitry (dio) Levashov
  **/
+var log = console.log;
 var elFinder = function(elm, opts, bootCallback) {
 	"use strict";
 	//this.time('load');
@@ -2370,7 +2371,7 @@ var elFinder = function(elm, opts, bootCallback) {
 			 **/
 			success = function(response) {
 				var d = self.options.debug;
-				console.log("got success response", response);
+				log("got success response", response);
 				// Set currrent request command name
 				self.currentReqCmd = cmd;
 				
@@ -2381,13 +2382,13 @@ var elFinder = function(elm, opts, bootCallback) {
 					d['backend-error'] = true;
 					d['warning'] = true;
 				}
-				
+				log("before raw check");
 				if (raw) {
 					self.abortXHR(xhr);
 					response && response.debug && self.debug('backend-debug', response);
 					return dfrd.resolve(response);
 				}
-				
+				log("before !response check");
 				if (!response) {
 					return dfrd.reject({error :['errResponse', 'errDataEmpty']}, xhr, response);
 				} else if (!$.isPlainObject(response)) {
@@ -2401,7 +2402,7 @@ var elFinder = function(elm, opts, bootCallback) {
 					}
 					return dfrd.reject({error :response.error}, xhr, response);
 				}
-				
+				log("before resolve definition");
 				var resolve = function() {
 					var pushLeafRoots = function(name) {
 						if (self.leafRoots[data.target] && response[name]) {
@@ -2470,7 +2471,6 @@ var elFinder = function(elm, opts, bootCallback) {
 					if (typeof prepare === 'function') {
 						prepare(response);
 					}
-					
 					if (navigate) {
 						actionTarget = navigate.target || 'added';
 						if (response[actionTarget] && response[actionTarget].length) {
@@ -2538,12 +2538,13 @@ var elFinder = function(elm, opts, bootCallback) {
 							});
 						}
 					}
-					
 					dfrd.resolve(response);
 					
 					response.debug && self.debug('backend-debug', response);
 				};
+				log("before abortXHR call");
 				self.abortXHR(xhr);
+				log("before lazy ternary");
 				lazy? self.lazy(resolve) : resolve();
 			},
 			xhr, _xhr,
@@ -9904,10 +9905,11 @@ elFinder.prototype = {
 	 * @return void
 	 */
 	abortXHR : function(xhr, o) {
+		log("in abortXHR");
 		var opts = o || {};
-		
 		if (xhr) {
 			opts.quiet && (xhr.quiet = true);
+			log("after opts.quiet");
 			if (opts.abort && xhr._requestId) {
 				this.request({
 					data: {
@@ -9917,9 +9919,12 @@ elFinder.prototype = {
 					preventDefault: true
 				});
 			}
-			xhr.abort();
+			log("before xhr.abort()");
+			//xhr.abort();
+			log("after xhr.abort()");
 			xhr = void 0;
 		}
+		log("after xhr if statement");
 	},
 
 	/**
